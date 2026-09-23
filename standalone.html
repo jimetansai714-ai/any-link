@@ -639,22 +639,64 @@
     }
 
     async function fetchClientSideAny(targetUrl) {
-      if (/tiktok\.com/i.test(targetUrl)) {
-        return await fetchTikTokClientSide(targetUrl);
+      const cleanUrl = targetUrl.trim();
+
+      // 1. Direct Movie / Video file (.mp4, .mkv, .webm, .mov)
+      if (/\.(mp4|mkv|webm|mov)(\?.*)?$/i.test(cleanUrl)) {
+        const rawFileName = cleanUrl.split('/').pop()?.split('?')[0] || 'Full_Movie.mp4';
+        const decodedTitle = decodeURIComponent(rawFileName).replace(/[\+_]/g, ' ');
+        return {
+          id: String(Date.now()),
+          title: decodedTitle || 'Direct Movie Stream',
+          thumbnail: 'https://images.unsplash.com/photo-1489599849927-2ee91cede3ba?w=800',
+          platform: 'Direct Movie Stream',
+          author: 'Movie CDN',
+          view_count: null,
+          description: `Direct high-speed stream for ${decodedTitle}`,
+          original_url: cleanUrl,
+          formats: [
+            {
+              format_id: 'direct_source',
+              resolution: 'Original Full Quality',
+              height: 1080,
+              ext: 'mp4',
+              filesize_approx: 'Direct High-Speed Stream',
+              quality_label: 'Direct Movie Video (Original High Speed)',
+              vcodec: 'h264',
+              has_audio: true,
+              direct_url: cleanUrl,
+              needs_merge: false
+            }
+          ],
+          audio_formats: []
+        };
       }
-      if (/youtube\.com|youtu\.be/i.test(targetUrl)) {
-        return await fetchYouTubeClientSide(targetUrl);
+
+      if (/tiktok\.com/i.test(cleanUrl)) {
+        return await fetchTikTokClientSide(cleanUrl);
       }
-      if (/instagram\.com/i.test(targetUrl)) {
-        return await fetchUniversalSocialClientSide(targetUrl, 'Instagram');
+      if (/youtube\.com|youtu\.be/i.test(cleanUrl)) {
+        return await fetchYouTubeClientSide(cleanUrl);
       }
-      if (/facebook\.com|fb\.watch/i.test(targetUrl)) {
-        return await fetchUniversalSocialClientSide(targetUrl, 'Facebook');
+      if (/instagram\.com/i.test(cleanUrl)) {
+        return await fetchUniversalSocialClientSide(cleanUrl, 'Instagram');
       }
-      if (/twitter\.com|x\.com/i.test(targetUrl)) {
-        return await fetchUniversalSocialClientSide(targetUrl, 'Twitter / X');
+      if (/facebook\.com|fb\.watch/i.test(cleanUrl)) {
+        return await fetchUniversalSocialClientSide(cleanUrl, 'Facebook');
       }
-      return await fetchUniversalSocialClientSide(targetUrl, 'Social Media');
+      if (/twitter\.com|x\.com/i.test(cleanUrl)) {
+        return await fetchUniversalSocialClientSide(cleanUrl, 'Twitter / X');
+      }
+      if (/ok\.ru|odnoklassniki/i.test(cleanUrl)) {
+        return await fetchUniversalSocialClientSide(cleanUrl, 'OK.ru (Movie Stream)');
+      }
+      if (/dailymotion\.com|dai\.ly/i.test(cleanUrl)) {
+        return await fetchUniversalSocialClientSide(cleanUrl, 'Dailymotion');
+      }
+      if (/vimeo\.com/i.test(cleanUrl)) {
+        return await fetchUniversalSocialClientSide(cleanUrl, 'Vimeo');
+      }
+      return await fetchUniversalSocialClientSide(cleanUrl, 'Social Media / Video');
     }
 
     // Form submission
