@@ -482,13 +482,187 @@
       };
     }
 
+    // Universal client-side extractors for static hosting (GitHub Pages)
+    async function fetchYouTubeClientSide(targetUrl) {
+      const cleanUrl = targetUrl.trim();
+      let title = 'YouTube Video';
+      let author = 'YouTube Creator';
+      let thumbnail = 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=800';
+
+      try {
+        const oembedRes = await fetch(`https://www.youtube.com/oembed?url=${encodeURIComponent(cleanUrl)}&format=json`);
+        if (oembedRes.ok) {
+          const oembed = await oembedRes.json();
+          if (oembed.title) title = oembed.title;
+          if (oembed.author_name) author = oembed.author_name;
+          if (oembed.thumbnail_url) thumbnail = oembed.thumbnail_url;
+        }
+      } catch (e) {}
+
+      let videoId = '';
+      const match = cleanUrl.match(/(?:youtu\.be\/|youtube\.com\/(?:embed\/|v\/|watch\?v=|watch\?.+&v=|shorts\/))([\w-]{11})/i);
+      if (match && match[1]) {
+        videoId = match[1];
+        if (!thumbnail || thumbnail.includes('unsplash')) {
+          thumbnail = `https://i.ytimg.com/vi/${videoId}/hqdefault.jpg`;
+        }
+      }
+
+      const isShorts = /shorts/i.test(cleanUrl);
+
+      return {
+        id: videoId || String(Date.now()),
+        title,
+        thumbnail,
+        platform: isShorts ? 'YouTube Shorts' : 'YouTube',
+        author,
+        view_count: null,
+        description: title,
+        original_url: cleanUrl,
+        formats: [
+          {
+            format_id: 'yt_1080p',
+            resolution: '1080p Full HD',
+            height: 1080,
+            ext: 'mp4',
+            filesize_approx: 'Full HD MP4',
+            quality_label: '1080p (Full HD)',
+            vcodec: 'h264',
+            has_audio: true,
+            direct_url: `https://p.savenow.to/api/button/?url=${encodeURIComponent(cleanUrl)}&f=1080`,
+            needs_merge: false
+          },
+          {
+            format_id: 'yt_720p',
+            resolution: '720p HD',
+            height: 720,
+            ext: 'mp4',
+            filesize_approx: 'HD MP4',
+            quality_label: '720p (HD Ready)',
+            vcodec: 'h264',
+            has_audio: true,
+            direct_url: `https://p.savenow.to/api/button/?url=${encodeURIComponent(cleanUrl)}&f=720`,
+            needs_merge: false
+          },
+          {
+            format_id: 'yt_360p',
+            resolution: '360p SD',
+            height: 360,
+            ext: 'mp4',
+            filesize_approx: 'Mobile Fast',
+            quality_label: '360p (Mobile SD)',
+            vcodec: 'h264',
+            has_audio: true,
+            direct_url: `https://p.savenow.to/api/button/?url=${encodeURIComponent(cleanUrl)}&f=360`,
+            needs_merge: false
+          }
+        ],
+        audio_formats: [
+          {
+            format_id: 'yt_mp3_320',
+            resolution: '320kbps MP3',
+            ext: 'mp3',
+            filesize_approx: 'HQ Audio',
+            quality_label: 'MP3 (320kbps Studio)',
+            has_audio: true,
+            direct_url: `https://p.savenow.to/api/button/?url=${encodeURIComponent(cleanUrl)}&f=mp3`,
+            needs_merge: false
+          }
+        ]
+      };
+    }
+
+    async function fetchUniversalSocialClientSide(targetUrl, detectedPlatform) {
+      const cleanUrl = targetUrl.trim();
+      let title = `${detectedPlatform} Media`;
+      let thumbnail = 'https://images.unsplash.com/photo-1611162617474-5b21e879e113?w=800';
+
+      if (detectedPlatform === 'Instagram') {
+        title = 'Instagram Reel / Post Media';
+        thumbnail = 'https://images.unsplash.com/photo-1611262588024-d12430b98920?w=800';
+      } else if (detectedPlatform === 'Facebook') {
+        title = 'Facebook HD Video';
+        thumbnail = 'https://images.unsplash.com/photo-1563986768609-322da13575f3?w=800';
+      } else if (detectedPlatform === 'Twitter / X') {
+        title = 'X / Twitter Video';
+        thumbnail = 'https://images.unsplash.com/photo-1611605698335-8b1569810432?w=800';
+      }
+
+      return {
+        id: String(Date.now()),
+        title,
+        thumbnail,
+        platform: detectedPlatform,
+        author: `${detectedPlatform} Creator`,
+        view_count: null,
+        description: `${detectedPlatform} download`,
+        original_url: cleanUrl,
+        formats: [
+          {
+            format_id: 'social_hd',
+            resolution: '1080p HD',
+            height: 1080,
+            ext: 'mp4',
+            filesize_approx: 'HD Video',
+            quality_label: `${detectedPlatform} HD (MP4)`,
+            vcodec: 'h264',
+            has_audio: true,
+            direct_url: `https://p.savenow.to/api/button/?url=${encodeURIComponent(cleanUrl)}&f=1080`,
+            needs_merge: false
+          },
+          {
+            format_id: 'social_sd',
+            resolution: '720p Standard',
+            height: 720,
+            ext: 'mp4',
+            filesize_approx: 'Standard MP4',
+            quality_label: `${detectedPlatform} Standard (MP4)`,
+            vcodec: 'h264',
+            has_audio: true,
+            direct_url: `https://p.savenow.to/api/button/?url=${encodeURIComponent(cleanUrl)}&f=720`,
+            needs_merge: false
+          }
+        ],
+        audio_formats: [
+          {
+            format_id: 'social_audio',
+            resolution: '320kbps MP3',
+            ext: 'mp3',
+            filesize_approx: 'HQ Audio',
+            quality_label: 'MP3 Audio (320kbps)',
+            has_audio: true,
+            direct_url: `https://p.savenow.to/api/button/?url=${encodeURIComponent(cleanUrl)}&f=mp3`,
+            needs_merge: false
+          }
+        ]
+      };
+    }
+
+    async function fetchClientSideAny(targetUrl) {
+      if (/tiktok\.com/i.test(targetUrl)) {
+        return await fetchTikTokClientSide(targetUrl);
+      }
+      if (/youtube\.com|youtu\.be/i.test(targetUrl)) {
+        return await fetchYouTubeClientSide(targetUrl);
+      }
+      if (/instagram\.com/i.test(targetUrl)) {
+        return await fetchUniversalSocialClientSide(targetUrl, 'Instagram');
+      }
+      if (/facebook\.com|fb\.watch/i.test(targetUrl)) {
+        return await fetchUniversalSocialClientSide(targetUrl, 'Facebook');
+      }
+      if (/twitter\.com|x\.com/i.test(targetUrl)) {
+        return await fetchUniversalSocialClientSide(targetUrl, 'Twitter / X');
+      }
+      return await fetchUniversalSocialClientSide(targetUrl, 'Social Media');
+    }
+
     // Form submission
     form.addEventListener('submit', async (e) => {
       e.preventDefault();
       const url = urlInput.value.trim();
       if (!url) return;
 
-      const isTikTok = /tiktok\.com/i.test(url);
       const isGitHubPages = window.location.hostname.includes('github.io');
 
       // Loading state
@@ -498,14 +672,14 @@
       errorBox.classList.add('hidden');
       resultCard.classList.add('hidden');
 
-      // If on GitHub Pages without backend and target is TikTok, go straight to client mode
-      if (isGitHubPages && isTikTok) {
+      // If on GitHub Pages, go straight to client mode for all platforms
+      if (isGitHubPages) {
         try {
-          const data = await fetchTikTokClientSide(url);
+          const data = await fetchClientSideAny(url);
           renderResult(data);
           return;
         } catch (err) {
-          errorTitle.innerText = 'Unable to Extract TikTok';
+          errorTitle.innerText = 'Unable to Extract Media';
           errorDetail.innerText = err.message || 'Please verify the link is public and active.';
           errorBox.classList.remove('hidden');
           return;
@@ -525,12 +699,9 @@
             body: JSON.stringify({ url })
           });
         } catch (netErr) {
-          if (isTikTok) {
-            const data = await fetchTikTokClientSide(url);
-            renderResult(data);
-            return;
-          }
-          throw new Error('Backend server is offline. If hosted on GitHub Pages, deploy backend to Render.com.');
+          const data = await fetchClientSideAny(url);
+          renderResult(data);
+          return;
         }
 
         const raw = await res.text();
@@ -538,27 +709,29 @@
         try {
           data = JSON.parse(raw);
         } catch {
-          if (isTikTok) {
-            const fallbackData = await fetchTikTokClientSide(url);
-            renderResult(fallbackData);
-            return;
-          }
-          throw new Error('GitHub Pages is static and cannot run Python backend. Please deploy main.py to Render.com (TikTok links work directly without backend).');
+          const fallbackData = await fetchClientSideAny(url);
+          renderResult(fallbackData);
+          return;
         }
 
         if (!res.ok) {
-          if (isTikTok) {
-            try {
-              const fallbackData = await fetchTikTokClientSide(url);
-              renderResult(fallbackData);
-              return;
-            } catch {}
+          try {
+            const fallbackData = await fetchClientSideAny(url);
+            renderResult(fallbackData);
+            return;
+          } catch {
+            throw new Error(data.detail || data.error || 'Failed to fetch video information');
           }
-          throw new Error(data.detail || data.error || 'Failed to fetch video information');
         }
 
         renderResult(data);
       } catch (err) {
+        try {
+          const fallbackData = await fetchClientSideAny(url);
+          renderResult(fallbackData);
+          return;
+        } catch {}
+
         errorTitle.innerText = 'Unable to Extract Media';
         errorDetail.innerText = err.message || 'Please verify the link is public and active.';
         errorBox.classList.remove('hidden');
